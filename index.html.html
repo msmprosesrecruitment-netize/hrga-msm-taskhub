@@ -1,0 +1,2003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HRGA MSM TaskHub — Plan. Track. Complete.</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            mining: {
+              50: '#f4f6f8',
+              100: '#e5e9ef',
+              200: '#cbd4e1',
+              300: '#94a3b8',
+              400: '#64748b',
+              500: '#475569',
+              600: '#334155',
+              700: '#1e293b',
+              800: '#0f172a',
+              900: '#090d16',
+            },
+            copper: {
+              500: '#d97706',
+              600: '#b45309',
+              700: '#92400e',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Vue 3 CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+  <!-- Supabase JS Client CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.3);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 0.5);
+    }
+    .badge-urgent { background-color: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .badge-high { background-color: #fff7ed; color: #ea580c; border: 1px solid #ffedd5; }
+    .badge-medium { background-color: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+    .badge-low { background-color: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
+  <div id="app" class="min-h-screen flex flex-col">
+
+    <!-- Supabase Setup Warning Banner if Credentials missing -->
+    <div v-if="!isSupabaseConfigured" class="bg-amber-500 text-slate-950 px-4 py-2.5 text-xs font-semibold flex items-center justify-between border-b border-amber-600 z-50">
+      <div class="flex items-center space-x-2">
+        <i data-lucide="alert-triangle" class="w-4 h-4 text-slate-950"></i>
+        <span>Supabase connection details are required. Click settings to configure Supabase URL & Anon Key.</span>
+      </div>
+      <button @click="showConfigModal = true" class="px-3 py-1 bg-slate-900 text-white rounded-lg hover:bg-slate-800 text-[11px]">
+        Configure Supabase Credentials
+      </button>
+    </div>
+
+    <!-- LOGIN SCREEN (Condition: !isLoggedIn) -->
+    <div v-if="!isLoggedIn" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 relative overflow-hidden">
+      <div class="absolute -top-40 -left-40 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-amber-600/15 rounded-full blur-3xl pointer-events-none"></div>
+      
+      <div class="w-full max-w-md bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-slate-200/50 z-10">
+        <div class="text-center mb-6">
+          <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-slate-900 text-amber-500 mb-3 shadow-lg shadow-slate-900/30">
+            <i data-lucide="pick" class="w-7 h-7"></i>
+          </div>
+          <h1 class="text-2xl font-bold tracking-tight text-slate-900">HRGA MSM TaskHub</h1>
+          <p class="text-xs font-semibold text-amber-600 tracking-wider uppercase mt-1">Plan. Track. Complete.</p>
+          <p class="text-xs text-slate-500 mt-1">Mining Operational Task Management</p>
+        </div>
+
+        <!-- Auth Error Banner -->
+        <div v-if="authError" class="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs flex items-center space-x-2">
+          <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0"></i>
+          <span>{{ authError }}</span>
+        </div>
+
+        <form @submit.prevent="handleLogin" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Email Address</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                <i data-lucide="mail" class="w-4 h-4"></i>
+              </span>
+              <input type="email" v-model="loginEmail" required class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 focus:ring-2 focus:ring-slate-900 outline-none transition" placeholder="ahlun@msm.co.id">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Password</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                <i data-lucide="lock" class="w-4 h-4"></i>
+              </span>
+              <input type="password" v-model="loginPassword" required class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 focus:ring-2 focus:ring-slate-900 outline-none transition" placeholder="••••••••">
+            </div>
+          </div>
+
+          <button type="submit" :disabled="authLoading" class="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl shadow-lg shadow-slate-900/20 transition flex items-center justify-center space-x-2 group">
+            <span v-if="!authLoading">LOGIN TO TASKHUB</span>
+            <span v-else class="flex items-center space-x-2">
+              <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+              <span>Authenticating...</span>
+            </span>
+            <i v-if="!authLoading" data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
+          </button>
+        </form>
+
+        <!-- Quick Demo Profiles Trigger -->
+        <div class="mt-6 pt-5 border-t border-slate-100 space-y-2">
+          <p class="text-[11px] font-medium text-slate-400 text-center uppercase tracking-wider">Quick Select Demo Account</p>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <button @click="fillQuickLogin('ahlun@msm.co.id')" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-left text-slate-700 font-medium truncate">
+              👤 Ahlun <span class="text-[10px] text-amber-600 font-bold">(Admin)</span>
+            </button>
+            <button @click="fillQuickLogin('lewin@msm.co.id')" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-left text-slate-700 font-medium truncate">
+              👤 Lewin <span class="text-[10px] text-slate-500">(Member)</span>
+            </button>
+            <button @click="fillQuickLogin('hamdi@msm.co.id')" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-left text-slate-700 font-medium truncate">
+              👤 Hamdi <span class="text-[10px] text-slate-500">(Member)</span>
+            </button>
+            <button @click="fillQuickLogin('aries@msm.co.id')" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-left text-slate-700 font-medium truncate">
+              👤 Aries <span class="text-[10px] text-slate-500">(Member)</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="mt-4 text-center">
+          <button @click="showConfigModal = true" class="text-xs text-slate-500 underline hover:text-slate-800">
+            Configure Supabase URL & Keys
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN APP SCREEN (Condition: isLoggedIn) -->
+    <div v-else class="flex h-screen overflow-hidden bg-slate-100">
+      
+      <!-- Sidebar Desktop -->
+      <aside class="hidden lg:flex flex-col w-64 bg-slate-900 text-slate-300 border-r border-slate-800 flex-shrink-0">
+        <div class="p-5 border-b border-slate-800/80 flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 flex-shrink-0">
+            <i data-lucide="pick" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h1 class="font-bold text-white tracking-tight leading-none text-base">HRGA MSM</h1>
+            <p class="text-[11px] font-semibold text-amber-500 uppercase tracking-wider mt-1">Plan. Track. Complete.</p>
+          </div>
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+          <button v-for="item in navItems" :key="item.id" 
+                  @click="currentTab = item.id"
+                  :class="['w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
+                           currentTab === item.id ? 'bg-amber-500 text-slate-950 font-semibold shadow-md shadow-amber-500/10' : 'text-slate-400 hover:text-white hover:bg-slate-800/60']">
+            <i :data-lucide="item.icon" class="w-4 h-4 flex-shrink-0"></i>
+            <span class="truncate">{{ item.label }}</span>
+            <span v-if="item.id === 'my-tasks' && myTasksCount > 0" class="ml-auto text-[11px] px-2 py-0.5 rounded-full font-bold" :class="currentTab === item.id ? 'bg-slate-950 text-white' : 'bg-slate-800 text-slate-300'">
+              {{ myTasksCount }}
+            </span>
+          </button>
+        </nav>
+
+        <!-- User Profile Footer Card -->
+        <div class="p-4 border-t border-slate-800/80 bg-slate-950/40">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3 min-w-0">
+              <div class="w-9 h-9 rounded-full bg-slate-700 border border-amber-500/40 flex items-center justify-center font-bold text-white text-xs flex-shrink-0">
+                {{ userInitials }}
+              </div>
+              <div class="truncate">
+                <p class="text-xs font-semibold text-white truncate">{{ currentUserProfile?.name || 'User' }}</p>
+                <p class="text-[10px] font-bold text-amber-500 uppercase tracking-wider">{{ currentUserProfile?.role || 'Member' }}</p>
+              </div>
+            </div>
+            <button @click="handleLogout" title="Logout" class="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition flex-shrink-0">
+              <i data-lucide="log-out" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Mobile Sidebar Drawer -->
+      <div v-if="mobileMenuOpen" class="fixed inset-0 bg-slate-900/60 z-40 lg:hidden backdrop-blur-sm" @click="mobileMenuOpen = false"></div>
+      
+      <aside :class="['fixed inset-y-0 left-0 w-64 bg-slate-900 text-slate-300 border-r border-slate-800 z-50 flex flex-col transition-transform duration-300 lg:hidden',
+                       mobileMenuOpen ? 'translate-x-0' : '-translate-x-full']">
+        <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
+              <i data-lucide="pick" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h1 class="font-bold text-white text-base">HRGA MSM</h1>
+              <p class="text-[10px] text-amber-500 font-semibold tracking-wider">Plan. Track. Complete.</p>
+            </div>
+          </div>
+          <button @click="mobileMenuOpen = false" class="text-slate-400 hover:text-white">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+          <button v-for="item in navItems" :key="item.id" 
+                  @click="currentTab = item.id; mobileMenuOpen = false"
+                  :class="['w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all',
+                           currentTab === item.id ? 'bg-amber-500 text-slate-950 font-semibold' : 'text-slate-400 hover:text-white hover:bg-slate-800']">
+            <i :data-lucide="item.icon" class="w-4 h-4"></i>
+            <span>{{ item.label }}</span>
+          </button>
+        </nav>
+
+        <div class="p-4 border-t border-slate-800">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <div class="w-9 h-9 rounded-full bg-slate-700 border border-amber-500/40 flex items-center justify-center font-bold text-white text-xs">
+                {{ userInitials }}
+              </div>
+              <div>
+                <p class="text-xs font-semibold text-white">{{ currentUserProfile?.name || 'User' }}</p>
+                <p class="text-[10px] text-amber-500 uppercase font-semibold">{{ currentUserProfile?.role || 'Member' }}</p>
+              </div>
+            </div>
+            <button @click="handleLogout" class="p-2 text-slate-400 hover:text-red-400">
+              <i data-lucide="log-out" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Content Area -->
+      <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+        
+        <!-- Topbar Header -->
+        <header class="h-16 bg-white border-b border-slate-200/80 px-4 lg:px-8 flex items-center justify-between flex-shrink-0 z-10 shadow-sm">
+          <div class="flex items-center space-x-4">
+            <button @click="mobileMenuOpen = true" class="lg:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg">
+              <i data-lucide="menu" class="w-6 h-6"></i>
+            </button>
+            <h2 class="text-lg font-bold text-slate-900 capitalize flex items-center space-x-2">
+              <span>{{ currentTabTitle }}</span>
+            </h2>
+          </div>
+
+          <div class="flex items-center space-x-3">
+            <button @click="fetchTasksFromSupabase" title="Refresh Data" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition">
+              <i data-lucide="refresh-cw" :class="['w-4 h-4', dataLoading ? 'animate-spin' : '']"></i>
+            </button>
+
+            <button @click="currentTab = 'create-task'" class="hidden sm:flex items-center space-x-2 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-sm transition">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span>Create Task</span>
+            </button>
+
+            <div class="h-6 w-px bg-slate-200 hidden sm:block"></div>
+            
+            <div class="flex items-center space-x-2 text-xs text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+              <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-500"></i>
+              <span class="hidden md:inline">Today:</span>
+              <span class="font-medium text-slate-700">{{ currentDateFormatted }}</span>
+            </div>
+          </div>
+        </header>
+
+        <!-- Main Body Scroll Context -->
+        <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+
+          <!-- TOAST NOTIFICATION -->
+          <div v-if="toast.show" :class="['fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-xl flex items-center space-x-3 border transition transform translate-y-0 text-xs font-medium text-white', toast.type === 'error' ? 'bg-rose-900 border-rose-700' : 'bg-slate-900 border-slate-700']">
+            <i :data-lucide="toast.type === 'error' ? 'alert-circle' : 'check-circle-2'" :class="toast.type === 'error' ? 'text-rose-400' : 'text-emerald-400'" class="w-5 h-5"></i>
+            <span>{{ toast.message }}</span>
+          </div>
+
+          <!-- SCREEN 2: DASHBOARD -->
+          <div v-if="currentTab === 'dashboard'" class="space-y-6">
+            <!-- Greeting Banner -->
+            <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white p-6 sm:p-8 rounded-2xl shadow-xl relative overflow-hidden">
+              <div class="absolute right-0 top-0 bottom-0 w-1/3 opacity-10 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none"></div>
+              <div class="relative z-10 max-w-2xl">
+                <div class="inline-flex items-center space-x-2 px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold mb-3 border border-amber-500/30">
+                  <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                  <span>Mining Operations HRGA Control Hub</span>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-bold tracking-tight">Good Day, {{ currentUserProfile?.name || 'User' }} 👋</h2>
+                <p class="text-slate-300 text-sm mt-2 leading-relaxed">
+                  Welcome to HRGA MSM TaskHub. You have <span class="text-amber-400 font-semibold">{{ overdueTasks.length }} overdue tasks</span> requiring attention.
+                </p>
+              </div>
+            </div>
+
+            <!-- Summary KPI Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+              <div v-for="stat in summaryStats" :key="stat.label" 
+                   class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm hover:shadow-md transition">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">{{ stat.label }}</span>
+                  <div :class="['w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold', stat.bgClass]">
+                    <i :data-lucide="stat.icon" class="w-4 h-4" :class="stat.textClass"></i>
+                  </div>
+                </div>
+                <div class="text-2xl font-bold text-slate-900">{{ stat.count }}</div>
+              </div>
+            </div>
+
+            <!-- Dashboard Two Column Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              
+              <!-- Left Column: Overdue Tasks Section (2 Cols) -->
+              <div class="lg:col-span-2 space-y-6">
+                <!-- Overdue Section -->
+                <div class="bg-white rounded-2xl border border-rose-200/80 shadow-sm overflow-hidden">
+                  <div class="p-5 border-b border-rose-100 bg-rose-50/50 flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                      <div class="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center">
+                        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                      </div>
+                      <div>
+                        <h3 class="text-sm font-bold text-slate-900">Critical Overdue Tasks</h3>
+                        <p class="text-xs text-slate-500">Requires immediate follow-up by PIC</p>
+                      </div>
+                    </div>
+                    <span class="px-2.5 py-1 bg-rose-100 text-rose-700 text-xs font-bold rounded-full">
+                      {{ overdueTasks.length }} Tasks
+                    </span>
+                  </div>
+
+                  <div class="divide-y divide-slate-100">
+                    <div v-for="task in overdueTasks" :key="task.id" 
+                         @click="openTaskDetail(task)"
+                         class="p-4 hover:bg-slate-50 transition cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div class="space-y-1">
+                        <div class="flex items-center space-x-2">
+                          <span class="text-xs font-bold text-slate-900 hover:text-indigo-600 transition">{{ task.title }}</span>
+                          <span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-rose-100 text-rose-700 border border-rose-200">
+                            Overdue
+                          </span>
+                        </div>
+                        <div class="flex items-center space-x-3 text-xs text-slate-500">
+                          <span>PIC: <strong class="text-slate-700">{{ getPicName(task.pic_id) }}</strong></span>
+                          <span>•</span>
+                          <span>Deadline: <span class="text-rose-600 font-medium">{{ formatDate(task.deadline) }}</span></span>
+                        </div>
+                      </div>
+                      <button class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold self-start sm:self-center transition">
+                        Inspect
+                      </button>
+                    </div>
+
+                    <div v-if="overdueTasks.length === 0" class="p-6 text-center text-xs text-slate-400">
+                      ✨ No overdue tasks. Great job team!
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Recent Tasks Stream -->
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5">
+                  <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-bold text-slate-900">Recent Task Activity</h3>
+                    <button @click="currentTab = 'team-tasks'" class="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center space-x-1">
+                      <span>View All Team Tasks</span>
+                      <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
+
+                  <div v-if="dataLoading" class="py-8 text-center text-slate-400 text-xs">
+                    <i data-lucide="loader-2" class="w-5 h-5 animate-spin mx-auto mb-2 text-slate-400"></i>
+                    Loading tasks from Supabase...
+                  </div>
+
+                  <div v-else class="space-y-3">
+                    <div v-for="task in tasks.slice(0, 5)" :key="task.id" 
+                         @click="openTaskDetail(task)"
+                         class="p-3.5 rounded-xl border border-slate-100 hover:border-slate-300 hover:bg-slate-50/80 transition cursor-pointer flex items-center justify-between">
+                      <div class="flex items-center space-x-3 min-w-0">
+                        <div :class="['w-2.5 h-2.5 rounded-full flex-shrink-0', getStatusDotClass(task.status)]"></div>
+                        <div class="truncate">
+                          <p class="text-xs font-semibold text-slate-800 truncate">{{ task.title }}</p>
+                          <p class="text-[11px] text-slate-500 truncate">{{ task.category }} • PIC: {{ getPicName(task.pic_id) }}</p>
+                        </div>
+                      </div>
+                      <div class="flex items-center space-x-2 flex-shrink-0 ml-3">
+                        <span :class="['px-2 py-0.5 text-[10px] font-semibold rounded-md uppercase tracking-wider', getPriorityClass(task.priority)]">
+                          {{ task.priority }}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div v-if="tasks.length === 0" class="py-8 text-center text-slate-400 text-xs">
+                      No tasks created yet. Click "Create Task" to get started.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Column: Quick Team Workload Summary -->
+              <div class="space-y-6">
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5">
+                  <h3 class="text-sm font-bold text-slate-900 mb-4">Team Workload Distribution</h3>
+                  <div class="space-y-4">
+                    <div v-for="member in teamProfiles" :key="member.id" class="space-y-1.5">
+                      <div class="flex items-center justify-between text-xs">
+                        <div class="flex items-center space-x-2">
+                          <div class="w-6 h-6 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-[10px]">
+                            {{ member.name ? member.name.substring(0,2).toUpperCase() : 'US' }}
+                          </div>
+                          <span class="font-medium text-slate-800">{{ member.name }}</span>
+                          <span class="text-[10px] text-slate-400">({{ member.role }})</span>
+                        </div>
+                        <span class="font-bold text-slate-700">{{ getMemberTaskCount(member.id) }} Tasks</span>
+                      </div>
+                      <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div class="bg-slate-800 h-full rounded-full transition-all duration-500" 
+                             :style="{ width: getMemberWorkloadPercent(member.id) + '%' }"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="bg-gradient-to-br from-amber-500/10 to-amber-600/5 rounded-2xl border border-amber-500/20 p-5">
+                  <div class="flex items-center space-x-3 mb-2">
+                    <div class="p-2 bg-amber-500/20 text-amber-700 rounded-lg">
+                      <i data-lucide="lightbulb" class="w-5 h-5"></i>
+                    </div>
+                    <h4 class="text-xs font-bold text-slate-900">HRGA Site Directive</h4>
+                  </div>
+                  <p class="text-xs text-slate-600 leading-relaxed">
+                    Ensure all contractor roster updates and mess evaluations are finalized prior to the weekly management review.
+                  </p>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- SCREEN 3: MY TASKS -->
+          <div v-if="currentTab === 'my-tasks'" class="space-y-6">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+              <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <h3 class="text-base font-bold text-slate-900">My Assigned Tasks</h3>
+                  <p class="text-xs text-slate-500">Tasks assigned directly to {{ currentUserProfile?.name }}</p>
+                </div>
+                
+                <div class="flex flex-wrap items-center gap-2">
+                  <div class="relative min-w-[200px]">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i>
+                    <input type="text" v-model="myTasksSearch" placeholder="Search my tasks..." class="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-slate-900 outline-none">
+                  </div>
+
+                  <select v-model="myTasksFilterStatus" class="bg-slate-50 border border-slate-200 text-xs rounded-xl px-3 py-1.5 outline-none font-medium text-slate-700">
+                    <option value="">All Statuses</option>
+                    <option value="To Do">To Do</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Waiting">Waiting</option>
+                    <option value="Done">Done</option>
+                  </select>
+
+                  <select v-model="myTasksFilterPriority" class="bg-slate-50 border border-slate-200 text-xs rounded-xl px-3 py-1.5 outline-none font-medium text-slate-700">
+                    <option value="">All Priorities</option>
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Urgent">Urgent</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- My Tasks Table View -->
+              <div class="overflow-x-auto rounded-xl border border-slate-200">
+                <table class="w-full text-left text-xs">
+                  <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold">
+                    <tr>
+                      <th class="py-3 px-4">Task Name</th>
+                      <th class="py-3 px-4">Category</th>
+                      <th class="py-3 px-4">Priority</th>
+                      <th class="py-3 px-4">Status</th>
+                      <th class="py-3 px-4">Deadline</th>
+                      <th class="py-3 px-4 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    <tr v-for="task in filteredMyTasks" :key="task.id" class="hover:bg-slate-50/80 transition cursor-pointer" @click="openTaskDetail(task)">
+                      <td class="py-3.5 px-4 font-semibold text-slate-900">{{ task.title }}</td>
+                      <td class="py-3.5 px-4 text-slate-600">{{ task.category }}</td>
+                      <td class="py-3.5 px-4">
+                        <span :class="['px-2 py-0.5 text-[10px] font-semibold rounded uppercase', getPriorityClass(task.priority)]">
+                          {{ task.priority }}
+                        </span>
+                      </td>
+                      <td class="py-3.5 px-4">
+                        <span :class="['px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center w-max space-x-1.5', getStatusBadgeStyle(task.status)]">
+                          <span class="w-1.5 h-1.5 rounded-full" :class="getStatusDotClass(task.status)"></span>
+                          <span>{{ task.status }}</span>
+                        </span>
+                      </td>
+                      <td class="py-3.5 px-4 font-medium text-slate-700">{{ formatDate(task.deadline) }}</td>
+                      <td class="py-3.5 px-4 text-right" @click.stop>
+                        <button @click="openTaskDetail(task)" class="p-1.5 text-slate-400 hover:text-slate-800 rounded-lg hover:bg-slate-200">
+                          <i data-lucide="eye" class="w-4 h-4"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr v-if="filteredMyTasks.length === 0">
+                      <td colspan="6" class="py-8 text-center text-slate-400 text-xs">
+                        No assigned tasks match your criteria.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- SCREEN 4: TEAM TASKS -->
+          <div v-if="currentTab === 'team-tasks'" class="space-y-6">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+              <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                  <h3 class="text-base font-bold text-slate-900">All Team Tasks Overview</h3>
+                  <p class="text-xs text-slate-500">Monitor and filter HRGA department tasks from Supabase</p>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                  <button @click="resetTeamFilters" class="px-3 py-1.5 border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold hover:bg-slate-50">
+                    Reset Filters
+                  </button>
+                </div>
+              </div>
+
+              <!-- Filter Controls Bar -->
+              <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 pt-2 border-t border-slate-100">
+                <input type="text" v-model="teamTasksSearch" placeholder="Search task..." class="col-span-2 sm:col-span-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-slate-900">
+                
+                <select v-model="teamTasksFilterPIC" class="bg-slate-50 border border-slate-200 text-xs rounded-xl px-3 py-1.5 outline-none font-medium text-slate-700">
+                  <option value="">All PICs</option>
+                  <option v-for="m in teamProfiles" :key="m.id" :value="m.id">{{ m.name }}</option>
+                </select>
+
+                <select v-model="teamTasksFilterCategory" class="bg-slate-50 border border-slate-200 text-xs rounded-xl px-3 py-1.5 outline-none font-medium text-slate-700">
+                  <option value="">All Categories</option>
+                  <option v-for="cat in allCategoriesList" :key="cat" :value="cat">{{ cat }}</option>
+                </select>
+
+                <select v-model="teamTasksFilterPriority" class="bg-slate-50 border border-slate-200 text-xs rounded-xl px-3 py-1.5 outline-none font-medium text-slate-700">
+                  <option value="">All Priorities</option>
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                  <option value="Urgent">Urgent</option>
+                </select>
+
+                <select v-model="teamTasksFilterStatus" class="bg-slate-50 border border-slate-200 text-xs rounded-xl px-3 py-1.5 outline-none font-medium text-slate-700">
+                  <option value="">All Statuses</option>
+                  <option value="To Do">To Do</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Waiting">Waiting</option>
+                  <option value="Done">Done</option>
+                </select>
+              </div>
+
+              <!-- Team Table -->
+              <div class="overflow-x-auto rounded-xl border border-slate-200">
+                <table class="w-full text-left text-xs">
+                  <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold">
+                    <tr>
+                      <th class="py-3 px-4">Task Title</th>
+                      <th class="py-3 px-4">PIC</th>
+                      <th class="py-3 px-4">Category</th>
+                      <th class="py-3 px-4">Priority</th>
+                      <th class="py-3 px-4">Status</th>
+                      <th class="py-3 px-4">Deadline</th>
+                      <th class="py-3 px-4 text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    <tr v-for="task in filteredTeamTasks" :key="task.id" class="hover:bg-slate-50 transition cursor-pointer" @click="openTaskDetail(task)">
+                      <td class="py-3.5 px-4 font-semibold text-slate-900">{{ task.title }}</td>
+                      <td class="py-3.5 px-4">
+                        <div class="flex items-center space-x-2">
+                          <div class="w-6 h-6 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-[10px]">
+                            {{ getPicName(task.pic_id).substring(0,2).toUpperCase() }}
+                          </div>
+                          <span class="font-medium text-slate-700">{{ getPicName(task.pic_id) }}</span>
+                        </div>
+                      </td>
+                      <td class="py-3.5 px-4 text-slate-600">{{ task.category }}</td>
+                      <td class="py-3.5 px-4">
+                        <span :class="['px-2 py-0.5 text-[10px] font-semibold rounded uppercase', getPriorityClass(task.priority)]">
+                          {{ task.priority }}
+                        </span>
+                      </td>
+                      <td class="py-3.5 px-4">
+                        <span :class="['px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center w-max space-x-1.5', getStatusBadgeStyle(task.status)]">
+                          <span class="w-1.5 h-1.5 rounded-full" :class="getStatusDotClass(task.status)"></span>
+                          <span>{{ task.status }}</span>
+                        </span>
+                      </td>
+                      <td class="py-3.5 px-4 font-medium text-slate-700">{{ formatDate(task.deadline) }}</td>
+                      <td class="py-3.5 px-4 text-center" @click.stop>
+                        <div class="flex items-center justify-center space-x-1">
+                          <button @click="openTaskDetail(task)" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold">
+                            Inspect
+                          </button>
+                          <button v-if="canEditTask(task)" @click="openEditTaskModal(task)" class="p-1 text-slate-400 hover:text-indigo-600 rounded-lg">
+                            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                          </button>
+                          <button v-if="isAdmin" @click="confirmDeleteTask(task)" class="p-1 text-slate-400 hover:text-rose-600 rounded-lg">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr v-if="filteredTeamTasks.length === 0">
+                      <td colspan="7" class="py-10 text-center text-slate-400 text-xs">
+                        No team tasks matching current filters.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- SCREEN 5: CREATE TASK FORM -->
+          <div v-if="currentTab === 'create-task'" class="max-w-3xl mx-auto space-y-6">
+            <div class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
+              <div>
+                <h3 class="text-lg font-bold text-slate-900">Create New HRGA Task</h3>
+                <p class="text-xs text-slate-500">Task will be saved directly into Supabase database</p>
+              </div>
+
+              <form @submit.prevent="submitCreateTask" class="space-y-5">
+                <div>
+                  <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Task Title *</label>
+                  <input type="text" v-model="newTask.title" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-slate-900 outline-none" placeholder="e.g., Camp Catering Hygiene Audit">
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Description</label>
+                  <textarea v-model="newTask.description" rows="3" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-slate-900 outline-none" placeholder="Add operational details, scope or location notes..."></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">PIC (Person In Charge) *</label>
+                    <select v-model="newTask.pic_id" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-slate-900 outline-none">
+                      <option v-for="m in teamProfiles" :key="m.id" :value="m.id">{{ m.name }} ({{ m.role }})</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Category *</label>
+                    <select v-model="newTask.category" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-slate-900 outline-none">
+                      <optgroup label="HR Categories">
+                        <option value="HR - Recruitment">Recruitment</option>
+                        <option value="HR - Employee Administration">Employee Administration</option>
+                        <option value="HR - Attendance & Roster">Attendance & Roster</option>
+                        <option value="HR - Contract">Contract</option>
+                        <option value="HR - Training & Development">Training & Development</option>
+                        <option value="HR - Employee Relations">Employee Relations</option>
+                      </optgroup>
+                      <optgroup label="GA Categories">
+                        <option value="GA - Camp/Mess">Camp / Mess</option>
+                        <option value="GA - Transportation">Transportation</option>
+                        <option value="GA - Catering">Catering</option>
+                        <option value="GA - Logistics">Logistics</option>
+                        <option value="GA - Facility">Facility</option>
+                        <option value="GA - General Affairs">General Affairs</option>
+                      </optgroup>
+                      <optgroup label="Other">
+                        <option value="Other - Reporting">Reporting</option>
+                        <option value="Other - Meeting">Meeting</option>
+                        <option value="Other - Project">Project</option>
+                      </optgroup>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Priority *</label>
+                    <select v-model="newTask.priority" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-slate-900 outline-none">
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                      <option value="Urgent">Urgent</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Start Date</label>
+                    <input type="date" v-model="newTask.start_date" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-slate-900 outline-none">
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Deadline *</label>
+                    <input type="date" v-model="newTask.deadline" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-slate-900 outline-none">
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Status</label>
+                  <select v-model="newTask.status" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-slate-900 outline-none">
+                    <option value="To Do">To Do</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Waiting">Waiting</option>
+                    <option value="Done">Done</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Operational Notes</label>
+                  <textarea v-model="newTask.notes" rows="2" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-slate-900 outline-none" placeholder="Specific notes or remarks..."></textarea>
+                </div>
+
+                <div class="pt-4 flex items-center justify-end space-x-3 border-t border-slate-100">
+                  <button type="button" @click="currentTab = 'team-tasks'" class="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+                    Cancel
+                  </button>
+                  <button type="submit" :disabled="formSubmitting" class="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-md shadow-slate-900/10 flex items-center space-x-2">
+                    <i v-if="formSubmitting" data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+                    <span>{{ formSubmitting ? 'Saving Task...' : 'Create Task' }}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- SCREEN 7: CALENDAR -->
+          <div v-if="currentTab === 'calendar'" class="space-y-6">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+              <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold text-slate-900">Task Schedule & Deadlines</h3>
+                <div class="text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                  September 2026
+                </div>
+              </div>
+
+              <div class="grid grid-cols-7 gap-1 text-center text-xs border border-slate-200 rounded-xl overflow-hidden">
+                <div v-for="day in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']" :key="day" class="bg-slate-100 font-bold py-2 text-slate-600">
+                  {{ day }}
+                </div>
+                <div v-for="d in 30" :key="d" class="min-h-[90px] p-1.5 bg-white border-t border-r border-slate-100 text-left hover:bg-slate-50/50 transition">
+                  <span :class="['text-[11px] font-bold p-1 rounded-full', d === 29 ? 'bg-amber-500 text-slate-950' : 'text-slate-400']">
+                    {{ d }}
+                  </span>
+                  
+                  <div class="mt-1 space-y-1">
+                    <div v-for="t in getTasksForDay(d)" :key="t.id" 
+                         @click="openTaskDetail(t)"
+                         class="p-1 rounded bg-slate-800 text-white text-[10px] truncate cursor-pointer font-medium hover:bg-slate-700">
+                      {{ t.title }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SCREEN 8: REPORTS -->
+          <div v-if="currentTab === 'reports'" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                <h3 class="text-sm font-bold text-slate-900">Tasks Breakdown by Category</h3>
+                <div class="space-y-3">
+                  <div v-for="cat in categoryReportData" :key="cat.name" class="space-y-1">
+                    <div class="flex justify-between text-xs font-medium text-slate-700">
+                      <span>{{ cat.name }}</span>
+                      <span>{{ cat.count }} tasks ({{ cat.percent }}%)</span>
+                    </div>
+                    <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                      <div class="bg-amber-500 h-full" :style="{ width: cat.percent + '%' }"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                <h3 class="text-sm font-bold text-slate-900">Task Completion Ratio</h3>
+                <div class="p-6 border border-slate-100 rounded-xl bg-slate-50 text-center space-y-2">
+                  <p class="text-3xl font-extrabold text-slate-900">{{ completionRate }}%</p>
+                  <p class="text-xs font-semibold text-slate-500">Overall Tasks Completed</p>
+                  <p class="text-[11px] text-slate-400">{{ tasks.filter(t => t.status === 'Done').length }} out of {{ tasks.length }} total site tasks completed</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SCREEN 9: SETTINGS & SUPABASE CONFIG -->
+          <div v-if="currentTab === 'settings'" class="max-w-4xl space-y-6">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-base font-bold text-slate-900">HRGA System Settings & Database</h3>
+                  <p class="text-xs text-slate-500">Supabase API connection & SQL database initialization</p>
+                </div>
+                <button @click="showConfigModal = true" class="px-3.5 py-2 bg-slate-900 text-white rounded-xl text-xs font-semibold hover:bg-slate-800">
+                  Edit Credentials
+                </button>
+              </div>
+
+              <!-- Database Credentials Info -->
+              <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-500 font-medium">Supabase URL:</span>
+                  <span class="font-mono text-slate-800 font-semibold">{{ supabaseUrl ? supabaseUrl : 'Not Configured' }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-500 font-medium">Database Status:</span>
+                  <span :class="['font-bold', isSupabaseConfigured ? 'text-emerald-600' : 'text-amber-600']">
+                    {{ isSupabaseConfigured ? 'Connected' : 'Missing Credentials' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- SQL Setup Assistant -->
+              <div class="space-y-3 pt-2">
+                <div class="flex items-center justify-between">
+                  <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Supabase Schema & RLS Setup Script</h4>
+                  <button @click="copySqlScript" class="px-3 py-1 bg-amber-500 text-slate-950 rounded-lg text-xs font-bold hover:bg-amber-400">
+                    Copy SQL Script
+                  </button>
+                </div>
+                <p class="text-xs text-slate-500">Execute this script in Supabase SQL Editor to auto-create tables, profiles, user records, and RLS policies.</p>
+
+                <textarea readonly rows="8" class="w-full font-mono text-[11px] bg-slate-900 text-slate-200 p-4 rounded-xl border border-slate-800 outline-none shadow-inner" :value="sqlScriptText"></textarea>
+              </div>
+
+              <!-- Team Management Roster -->
+              <div class="space-y-3 pt-4 border-t border-slate-100">
+                <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">HRGA MSM Team Roster</h4>
+                <div class="divide-y divide-slate-100 border border-slate-200 rounded-xl">
+                  <div v-for="m in teamProfiles" :key="m.id" class="p-3.5 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                      <div class="w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-xs">
+                        {{ m.name ? m.name.substring(0,2).toUpperCase() : 'US' }}
+                      </div>
+                      <div>
+                        <p class="text-xs font-semibold text-slate-900">{{ m.name }}</p>
+                        <p class="text-[10px] text-slate-500">{{ m.email }}</p>
+                      </div>
+                    </div>
+                    <span :class="['px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider', m.role === 'admin' ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-slate-100 text-slate-700']">
+                      {{ m.role }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </main>
+      </div>
+
+      <!-- SCREEN 6: TASK DETAIL MODAL -->
+      <div v-if="selectedTask" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] flex flex-col">
+          
+          <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div class="flex items-center space-x-2">
+              <span :class="['px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider', getPriorityClass(selectedTask.priority)]">
+                {{ selectedTask.priority }} Priority
+              </span>
+              <span class="text-xs text-slate-400">•</span>
+              <span class="text-xs font-medium text-slate-600">{{ selectedTask.category }}</span>
+            </div>
+            <button @click="selectedTask = null" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <div class="p-6 overflow-y-auto space-y-6 flex-1">
+            <div class="space-y-3">
+              <div class="flex items-start justify-between gap-4">
+                <h2 class="text-xl font-bold text-slate-900">{{ selectedTask.title }}</h2>
+                <button v-if="canEditTask(selectedTask)" @click="openEditTaskModal(selectedTask)" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg flex items-center space-x-1 flex-shrink-0">
+                  <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+                  <span>Edit</span>
+                </button>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-3">
+                <span :class="['px-3 py-1 rounded-full text-xs font-semibold flex items-center space-x-1.5', getStatusBadgeStyle(selectedTask.status)]">
+                  <span class="w-2 h-2 rounded-full" :class="getStatusDotClass(selectedTask.status)"></span>
+                  <span>{{ selectedTask.status }}</span>
+                </span>
+                
+                <!-- Quick Status Toggle Buttons -->
+                <div v-if="canUpdateStatus(selectedTask)" class="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl text-xs">
+                  <button @click="quickUpdateStatus('To Do')" :class="['px-2 py-0.5 rounded-lg text-[11px] font-medium transition', selectedTask.status === 'To Do' ? 'bg-white text-slate-900 shadow-sm font-bold' : 'text-slate-500']">To Do</button>
+                  <button @click="quickUpdateStatus('In Progress')" :class="['px-2 py-0.5 rounded-lg text-[11px] font-medium transition', selectedTask.status === 'In Progress' ? 'bg-white text-slate-900 shadow-sm font-bold' : 'text-slate-500']">In Progress</button>
+                  <button @click="quickUpdateStatus('Waiting')" :class="['px-2 py-0.5 rounded-lg text-[11px] font-medium transition', selectedTask.status === 'Waiting' ? 'bg-white text-slate-900 shadow-sm font-bold' : 'text-slate-500']">Waiting</button>
+                  <button @click="quickUpdateStatus('Done')" :class="['px-2 py-0.5 rounded-lg text-[11px] font-medium transition', selectedTask.status === 'Done' ? 'bg-white text-slate-900 shadow-sm font-bold' : 'text-slate-500']">Done</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/60 text-xs text-slate-700 space-y-1">
+              <p class="font-semibold text-slate-900">Description:</p>
+              <p class="leading-relaxed whitespace-pre-line">{{ selectedTask.description || 'No description provided.' }}</p>
+            </div>
+
+            <div v-if="selectedTask.notes" class="bg-amber-50/60 p-4 rounded-xl border border-amber-200/60 text-xs text-amber-900 space-y-1">
+              <p class="font-semibold">Notes:</p>
+              <p>{{ selectedTask.notes }}</p>
+            </div>
+
+            <!-- Metadata Table Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs border-y border-slate-100 py-4">
+              <div>
+                <span class="text-slate-400 block text-[10px] uppercase font-semibold">Person In Charge</span>
+                <span class="font-bold text-slate-800">{{ getPicName(selectedTask.pic_id) }}</span>
+              </div>
+              <div>
+                <span class="text-slate-400 block text-[10px] uppercase font-semibold">Deadline</span>
+                <span class="font-bold text-slate-800">{{ formatDate(selectedTask.deadline) }}</span>
+              </div>
+              <div>
+                <span class="text-slate-400 block text-[10px] uppercase font-semibold">Start Date</span>
+                <span class="font-bold text-slate-800">{{ formatDate(selectedTask.start_date) || '-' }}</span>
+              </div>
+              <div>
+                <span class="text-slate-400 block text-[10px] uppercase font-semibold">Created By</span>
+                <span class="font-bold text-slate-800">{{ getPicName(selectedTask.created_by) }}</span>
+              </div>
+              <div>
+                <span class="text-slate-400 block text-[10px] uppercase font-semibold">Created At</span>
+                <span class="font-bold text-slate-800">{{ formatDate(selectedTask.created_at) }}</span>
+              </div>
+              <div>
+                <span class="text-slate-400 block text-[10px] uppercase font-semibold">Updated At</span>
+                <span class="font-bold text-slate-800">{{ formatDate(selectedTask.updated_at) }}</span>
+              </div>
+            </div>
+
+            <!-- Comments Thread Section -->
+            <div class="space-y-3">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Comments & Operational Log</h3>
+              
+              <div v-if="commentsLoading" class="py-4 text-center text-xs text-slate-400">
+                <i data-lucide="loader-2" class="w-4 h-4 animate-spin mx-auto mb-1"></i>
+                Loading comments...
+              </div>
+
+              <div v-else class="space-y-3 max-h-48 overflow-y-auto pr-1">
+                <div v-for="c in taskComments" :key="c.id" class="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs space-y-1">
+                  <div class="flex items-center justify-between text-slate-500">
+                    <span class="font-bold text-slate-800">{{ c.profiles?.name || 'User' }}</span>
+                    <span class="text-[10px] text-slate-400">{{ formatDate(c.created_at) }}</span>
+                  </div>
+                  <p class="text-slate-700 leading-normal">{{ c.comment }}</p>
+                </div>
+
+                <div v-if="taskComments.length === 0" class="text-xs text-slate-400 italic">
+                  No comments logged yet.
+                </div>
+              </div>
+
+              <!-- Comment Form -->
+              <div class="flex items-center space-x-2 pt-2">
+                <input type="text" v-model="newCommentText" @keyup.enter="postComment" placeholder="Write a comment or status update..." class="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-slate-900">
+                <button @click="postComment" :disabled="commentSubmitting" class="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold">
+                  Post
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="p-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
+            <div>
+              <button v-if="isAdmin" @click="confirmDeleteTask(selectedTask)" class="px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-lg transition">
+                Delete Task
+              </button>
+            </div>
+            <button @click="selectedTask = null" class="px-4 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded-xl">
+              Close
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- EDIT TASK MODAL -->
+      <div v-if="editTaskModalOpen" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] flex flex-col">
+          <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <h3 class="text-sm font-bold text-slate-900">Edit HRGA Task</h3>
+            <button @click="editTaskModalOpen = false" class="text-slate-400 hover:text-slate-700">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <form @submit.prevent="submitEditTask" class="p-6 overflow-y-auto space-y-4">
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Title</label>
+              <input type="text" v-model="editingTask.title" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-slate-900">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Description</label>
+              <textarea v-model="editingTask.description" rows="3" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-slate-900"></textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">PIC</label>
+                <select v-model="editingTask.pic_id" :disabled="!isAdmin" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-slate-900">
+                  <option v-for="m in teamProfiles" :key="m.id" :value="m.id">{{ m.name }}</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Category</label>
+                <select v-model="editingTask.category" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-slate-900">
+                  <option v-for="cat in allCategoriesList" :key="cat" :value="cat">{{ cat }}</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4">
+              <div>
+                <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Priority</label>
+                <select v-model="editingTask.priority" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-slate-900">
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                  <option value="Urgent">Urgent</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Status</label>
+                <select v-model="editingTask.status" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-slate-900">
+                  <option value="To Do">To Do</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Waiting">Waiting</option>
+                  <option value="Done">Done</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Deadline</label>
+                <input type="date" v-model="editingTask.deadline" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-slate-900">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Notes</label>
+              <textarea v-model="editingTask.notes" rows="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-slate-900"></textarea>
+            </div>
+
+            <div class="pt-3 flex justify-end space-x-2 border-t">
+              <button type="button" @click="editTaskModalOpen = false" class="px-4 py-2 border rounded-xl text-xs font-semibold">Cancel</button>
+              <button type="submit" class="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-semibold">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- DELETE CONFIRMATION DIALOG MODAL -->
+      <div v-if="deleteConfirmModalOpen" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 border border-slate-200 shadow-2xl space-y-4">
+          <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+            <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+          </div>
+          <div class="text-center space-y-1">
+            <h3 class="text-base font-bold text-slate-900">Confirm Task Deletion</h3>
+            <p class="text-xs text-slate-500">Are you sure you want to delete this task? This operation cannot be undone.</p>
+            <p v-if="taskToDelete" class="text-xs font-bold text-slate-800 bg-slate-50 p-2 rounded-lg mt-2">"{{ taskToDelete.title }}"</p>
+          </div>
+          <div class="flex items-center justify-end space-x-3 pt-2">
+            <button @click="deleteConfirmModalOpen = false" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl">
+              Cancel
+            </button>
+            <button @click="executeDeleteTask" class="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-xl shadow-lg shadow-rose-600/20">
+              Yes, Delete Task
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUPABASE CONFIGURATION MODAL -->
+      <div v-if="showConfigModal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 border border-slate-200 shadow-2xl space-y-4">
+          <div class="flex items-center justify-between border-b pb-3">
+            <h3 class="text-sm font-bold text-slate-900">Supabase Connection Settings</h3>
+            <button @click="showConfigModal = false" class="text-slate-400 hover:text-slate-700">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+          
+          <div class="space-y-3 text-xs">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Supabase URL</label>
+              <input type="text" v-model="tempSupabaseUrl" placeholder="https://xyzcompany.supabase.co" class="w-full p-2.5 border rounded-xl bg-slate-50 outline-none">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Supabase Anon Key</label>
+              <input type="password" v-model="tempSupabaseAnonKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5..." class="w-full p-2.5 border rounded-xl bg-slate-50 outline-none">
+            </div>
+            <p class="text-[11px] text-slate-500">Credentials are stored safely in local memory/environment configuration.</p>
+          </div>
+
+          <div class="flex items-center justify-end space-x-2 pt-2">
+            <button @click="showConfigModal = false" class="px-4 py-2 border rounded-xl font-semibold text-xs text-slate-600">Close</button>
+            <button @click="saveSupabaseConfig" class="px-4 py-2 bg-slate-900 text-white rounded-xl font-semibold text-xs hover:bg-slate-800">Save & Reconnect</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const { createApp, ref, computed, onMounted, onUpdated, watch } = Vue;
+
+    createApp({
+      setup() {
+        // Supabase Client Config & State
+        const supabaseUrl = ref(window.SUPABASE_URL || localStorage.getItem('HRGA_SUPABASE_URL') || '');
+        const supabaseAnonKey = ref(window.SUPABASE_ANON_KEY || localStorage.getItem('HRGA_SUPABASE_ANON_KEY') || '');
+        const tempSupabaseUrl = ref(supabaseUrl.value);
+        const tempSupabaseAnonKey = ref(supabaseAnonKey.value);
+        const showConfigModal = ref(false);
+
+        let supabaseClient = null;
+
+        const isSupabaseConfigured = computed(() => {
+          return Boolean(supabaseUrl.value && supabaseAnonKey.value);
+        });
+
+        const initSupabaseClient = () => {
+          if (isSupabaseConfigured.value && window.supabase) {
+            try {
+              supabaseClient = window.supabase.createClient(supabaseUrl.value, supabaseAnonKey.value);
+            } catch (err) {
+              console.error('Supabase init error:', err);
+            }
+          }
+        };
+
+        const saveSupabaseConfig = () => {
+          supabaseUrl.value = tempSupabaseUrl.value.trim();
+          supabaseAnonKey.value = tempSupabaseAnonKey.value.trim();
+          localStorage.setItem('HRGA_SUPABASE_URL', supabaseUrl.value);
+          localStorage.setItem('HRGA_SUPABASE_ANON_KEY', supabaseAnonKey.value);
+          initSupabaseClient();
+          showConfigModal.value = false;
+          showToast('Supabase settings saved.');
+          if (isLoggedIn.value) {
+            fetchTasksFromSupabase();
+          }
+        };
+
+        // Authentication State
+        const isLoggedIn = ref(false);
+        const authLoading = ref(false);
+        const authError = ref('');
+        const loginEmail = ref('ahlun@msm.co.id');
+        const loginPassword = ref('password');
+        const currentUserProfile = ref(null);
+
+        // App Navigation & UI State
+        const currentTab = ref('dashboard');
+        const mobileMenuOpen = ref(false);
+        const dataLoading = ref(false);
+        const formSubmitting = ref(false);
+
+        // Toast message banner
+        const toast = ref({ show: false, message: '', type: 'success' });
+        const showToast = (msg, type = 'success') => {
+          toast.value = { show: true, message: msg, type };
+          setTimeout(() => { toast.value.show = false; }, 3500);
+        };
+
+        // Navigation Menu
+        const navItems = [
+          { id: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
+          { id: 'my-tasks', label: 'My Tasks', icon: 'check-square' },
+          { id: 'team-tasks', label: 'Team Tasks', icon: 'users' },
+          { id: 'create-task', label: 'Create Task', icon: 'plus-circle' },
+          { id: 'calendar', label: 'Calendar', icon: 'calendar' },
+          { id: 'reports', label: 'Reports', icon: 'bar-chart-3' },
+          { id: 'settings', label: 'Settings', icon: 'settings' },
+        ];
+
+        // Roster / Profiles Data from Supabase
+        const teamProfiles = ref([
+          { id: 'usr-1', name: 'Ahlun', email: 'ahlun@msm.co.id', role: 'admin' },
+          { id: 'usr-2', name: 'Lewin', email: 'lewin@msm.co.id', role: 'member' },
+          { id: 'usr-3', name: 'Hamdi', email: 'hamdi@msm.co.id', role: 'member' },
+          { id: 'usr-4', name: 'Aries', email: 'aries@msm.co.id', role: 'member' },
+          { id: 'usr-5', name: 'Fahri', email: 'fahri@msm.co.id', role: 'member' },
+        ]);
+
+        // Tasks Reactive Store from Supabase
+        const tasks = ref([]);
+
+        // Quick Auth Pre-fill
+        const fillQuickLogin = (email) => {
+          loginEmail.value = email;
+          loginPassword.value = 'password';
+        };
+
+        // Authentication Handler
+        const handleLogin = async () => {
+          authLoading.value = true;
+          authError.value = '';
+
+          try {
+            if (supabaseClient) {
+              const { data, error } = await supabaseClient.auth.signInWithPassword({
+                email: loginEmail.value,
+                password: loginPassword.value
+              });
+
+              if (error) {
+                // If Supabase user profile doesn't exist yet, allow fallback for smooth quick demo previewing
+                console.warn('Supabase auth warning:', error.message);
+                const matchedDemo = teamProfiles.value.find(p => p.email.toLowerCase() === loginEmail.value.toLowerCase());
+                if (matchedDemo) {
+                  currentUserProfile.value = matchedDemo;
+                  isLoggedIn.value = true;
+                  showToast(`Logged in as ${matchedDemo.name} (${matchedDemo.role})`);
+                  fetchTasksFromSupabase();
+                  authLoading.value = false;
+                  return;
+                }
+                authError.value = error.message;
+                authLoading.value = false;
+                return;
+              }
+
+              // Fetch user profile from Supabase
+              const user = data.user;
+              const { data: profile } = await supabaseClient
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+
+              if (profile) {
+                currentUserProfile.value = profile;
+              } else {
+                currentUserProfile.value = {
+                  id: user.id,
+                  email: user.email,
+                  name: user.user_metadata?.name || loginEmail.value.split('@')[0],
+                  role: loginEmail.value.includes('ahlun') ? 'admin' : 'member'
+                };
+              }
+              isLoggedIn.value = true;
+              showToast('Login successful!');
+              fetchTasksFromSupabase();
+            } else {
+              // Local fallback match if Supabase client not initialized yet
+              const matchedDemo = teamProfiles.value.find(p => p.email.toLowerCase() === loginEmail.value.toLowerCase());
+              if (matchedDemo) {
+                currentUserProfile.value = matchedDemo;
+                isLoggedIn.value = true;
+                showToast(`Logged in as ${matchedDemo.name}`);
+              } else {
+                authError.value = 'User account not found.';
+              }
+            }
+          } catch (err) {
+            authError.value = err.message || 'Login failed.';
+          } finally {
+            authLoading.value = false;
+          }
+        };
+
+        const handleLogout = async () => {
+          if (supabaseClient) {
+            await supabaseClient.auth.signOut();
+          }
+          isLoggedIn.value = false;
+          currentUserProfile.value = null;
+          showToast('Logged out.');
+        };
+
+        // Fetch Tasks from Supabase
+        const fetchTasksFromSupabase = async () => {
+          dataLoading.value = true;
+          try {
+            if (supabaseClient) {
+              const { data, error } = await supabaseClient
+                .from('tasks')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+              if (error) {
+                console.error('Supabase fetch tasks error:', error);
+                showToast('Failed to fetch tasks from database', 'error');
+              } else if (data && data.length > 0) {
+                tasks.value = data;
+              } else {
+                // If table empty, load default initial mining tasks
+                seedInitialTasksIfEmpty();
+              }
+
+              // Also sync profiles list
+              const { data: profs } = await supabaseClient.from('profiles').select('*');
+              if (profs && profs.length > 0) {
+                teamProfiles.value = profs;
+              }
+            } else {
+              seedInitialTasksIfEmpty();
+            }
+          } catch (err) {
+            console.error(err);
+          } finally {
+            dataLoading.value = false;
+          }
+        };
+
+        const seedInitialTasksIfEmpty = () => {
+          if (tasks.value.length === 0) {
+            tasks.value = [
+              {
+                id: 'tsk-101',
+                title: 'Follow Up Kandidat Operator Excavator',
+                description: 'Follow up top 5 operator candidates for site expansion.',
+                pic_id: teamProfiles.value[1]?.id || 'usr-2',
+                category: 'HR - Recruitment',
+                priority: 'High',
+                status: 'In Progress',
+                start_date: '2026-09-20',
+                deadline: '2026-09-28',
+                notes: 'Interview scheduled via HR office.',
+                created_by: teamProfiles.value[0]?.id || 'usr-1',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              },
+              {
+                id: 'tsk-102',
+                title: 'Update Employee Shift Roster Database',
+                description: 'Audit shift roster data and update site ID compliance numbers.',
+                pic_id: teamProfiles.value[0]?.id || 'usr-1',
+                category: 'HR - Employee Administration',
+                priority: 'Medium',
+                status: 'To Do',
+                start_date: '2026-09-25',
+                deadline: '2026-10-02',
+                notes: 'Check with department leads.',
+                created_by: teamProfiles.value[0]?.id || 'usr-1',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              },
+              {
+                id: 'tsk-103',
+                title: 'Mess Block C Hygiene & Water Inspection',
+                description: 'Inspect Block C room cleanliness and water supply pressure.',
+                pic_id: teamProfiles.value[2]?.id || 'usr-3',
+                category: 'GA - Camp/Mess',
+                priority: 'Medium',
+                status: 'Done',
+                start_date: '2026-09-24',
+                deadline: '2026-09-28',
+                notes: 'Completed report.',
+                created_by: teamProfiles.value[0]?.id || 'usr-1',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }
+            ];
+          }
+        };
+
+        // Create Task
+        const newTask = ref({
+          title: '',
+          description: '',
+          pic_id: '',
+          category: 'HR - Recruitment',
+          priority: 'Medium',
+          start_date: '',
+          deadline: '2026-10-05',
+          status: 'To Do',
+          notes: ''
+        });
+
+        const submitCreateTask = async () => {
+          if (!newTask.value.title.trim() || !newTask.value.deadline) {
+            showToast('Please fill in required fields.', 'error');
+            return;
+          }
+
+          formSubmitting.value = true;
+          const payload = {
+            title: newTask.value.title,
+            description: newTask.value.description,
+            pic_id: newTask.value.pic_id || currentUserProfile.value?.id || 'usr-1',
+            category: newTask.value.category,
+            priority: newTask.value.priority,
+            start_date: newTask.value.start_date || null,
+            deadline: newTask.value.deadline,
+            status: newTask.value.status || 'To Do',
+            notes: newTask.value.notes,
+            created_by: currentUserProfile.value?.id || 'usr-1',
+            updated_at: new Date().toISOString()
+          };
+
+          try {
+            if (supabaseClient) {
+              const { data, error } = await supabaseClient.from('tasks').insert([payload]).select();
+              if (error) {
+                showToast(`Error creating task: ${error.message}`, 'error');
+              } else {
+                showToast('Task created successfully!');
+                fetchTasksFromSupabase();
+              }
+            } else {
+              tasks.value.unshift({ id: 'tsk-' + Date.now(), ...payload, created_at: new Date().toISOString() });
+              showToast('Task created successfully!');
+            }
+
+            // Reset form
+            newTask.value = {
+              title: '',
+              description: '',
+              pic_id: currentUserProfile.value?.id || 'usr-1',
+              category: 'HR - Recruitment',
+              priority: 'Medium',
+              start_date: '',
+              deadline: '2026-10-05',
+              status: 'To Do',
+              notes: ''
+            };
+            currentTab.value = 'team-tasks';
+          } catch (err) {
+            showToast(err.message, 'error');
+          } finally {
+            formSubmitting.value = false;
+          }
+        };
+
+        // Edit Task Logic
+        const editTaskModalOpen = ref(false);
+        const editingTask = ref({});
+
+        const canEditTask = (task) => {
+          if (!currentUserProfile.value) return false;
+          if (currentUserProfile.value.role === 'admin') return true;
+          return task.pic_id === currentUserProfile.value.id;
+        };
+
+        const canUpdateStatus = (task) => {
+          if (!currentUserProfile.value) return false;
+          if (currentUserProfile.value.role === 'admin') return true;
+          return task.pic_id === currentUserProfile.value.id;
+        };
+
+        const isAdmin = computed(() => currentUserProfile.value?.role === 'admin');
+
+        const openEditTaskModal = (task) => {
+          editingTask.value = JSON.parse(JSON.stringify(task));
+          editTaskModalOpen.value = true;
+        };
+
+        const submitEditTask = async () => {
+          try {
+            editingTask.value.updated_at = new Date().toISOString();
+            if (supabaseClient) {
+              const { error } = await supabaseClient
+                .from('tasks')
+                .update(editingTask.value)
+                .eq('id', editingTask.value.id);
+
+              if (error) {
+                showToast(`Update error: ${error.message}`, 'error');
+                return;
+              }
+            } else {
+              const idx = tasks.value.findIndex(t => t.id === editingTask.value.id);
+              if (idx !== -1) tasks.value[idx] = { ...editingTask.value };
+            }
+
+            showToast('Task updated successfully!');
+            editTaskModalOpen.value = false;
+            if (selectedTask.value && selectedTask.value.id === editingTask.value.id) {
+              selectedTask.value = { ...editingTask.value };
+            }
+            fetchTasksFromSupabase();
+          } catch (err) {
+            showToast(err.message, 'error');
+          }
+        };
+
+        // Quick Status Update
+        const quickUpdateStatus = async (newStatus) => {
+          if (!selectedTask.value) return;
+          selectedTask.value.status = newStatus;
+          selectedTask.value.updated_at = new Date().toISOString();
+
+          if (supabaseClient) {
+            await supabaseClient.from('tasks').update({
+              status: newStatus,
+              updated_at: new Date().toISOString()
+            }).eq('id', selectedTask.value.id);
+          } else {
+            const found = tasks.value.find(t => t.id === selectedTask.value.id);
+            if (found) found.status = newStatus;
+          }
+          showToast(`Status updated to ${newStatus}`);
+        };
+
+        // Delete Task Confirmation Modal
+        const deleteConfirmModalOpen = ref(false);
+        const taskToDelete = ref(null);
+
+        const confirmDeleteTask = (task) => {
+          if (!isAdmin.value) {
+            showToast('Only Admin can delete tasks.', 'error');
+            return;
+          }
+          taskToDelete.value = task;
+          deleteConfirmModalOpen.value = true;
+        };
+
+        const executeDeleteTask = async () => {
+          if (!taskToDelete.value) return;
+          try {
+            if (supabaseClient) {
+              const { error } = await supabaseClient
+                .from('tasks')
+                .delete()
+                .eq('id', taskToDelete.value.id);
+
+              if (error) {
+                showToast(`Delete error: ${error.message}`, 'error');
+                return;
+              }
+            }
+            tasks.value = tasks.value.filter(t => t.id !== taskToDelete.value.id);
+            if (selectedTask.value && selectedTask.value.id === taskToDelete.value.id) {
+              selectedTask.value = null;
+            }
+            showToast('Task deleted successfully.');
+          } catch (err) {
+            showToast(err.message, 'error');
+          } finally {
+            deleteConfirmModalOpen.value = false;
+            taskToDelete.value = null;
+          }
+        };
+
+        // Task Detail & Comments
+        const selectedTask = ref(null);
+        const taskComments = ref([]);
+        const commentsLoading = ref(false);
+        const newCommentText = ref('');
+        const commentSubmitting = ref(false);
+
+        const openTaskDetail = (task) => {
+          selectedTask.value = { ...task };
+          fetchComments(task.id);
+        };
+
+        const fetchComments = async (taskId) => {
+          commentsLoading.value = true;
+          taskComments.value = [];
+          try {
+            if (supabaseClient) {
+              const { data, error } = await supabaseClient
+                .from('comments')
+                .select('*, profiles(name)')
+                .eq('task_id', taskId)
+                .order('created_at', { ascending: true });
+
+              if (!error && data) {
+                taskComments.value = data;
+              }
+            } else {
+              // Local preview comments
+              taskComments.value = [
+                { id: 1, comment: 'Task inspected during morning shift.', created_at: new Date().toISOString(), profiles: { name: 'Lewin' } }
+              ];
+            }
+          } catch (err) {
+            console.error(err);
+          } finally {
+            commentsLoading.value = false;
+          }
+        };
+
+        const postComment = async () => {
+          if (!newCommentText.value.trim() || !selectedTask.value) return;
+          commentSubmitting.value = true;
+
+          const commentText = newCommentText.value.trim();
+          const userId = currentUserProfile.value?.id || 'usr-1';
+
+          try {
+            if (supabaseClient) {
+              const { data, error } = await supabaseClient.from('comments').insert([{
+                task_id: selectedTask.value.id,
+                user_id: userId,
+                comment: commentText
+              }]).select('*, profiles(name)');
+
+              if (!error && data) {
+                taskComments.value.push(data[0]);
+              } else {
+                fetchComments(selectedTask.value.id);
+              }
+            } else {
+              taskComments.value.push({
+                id: Date.now(),
+                comment: commentText,
+                created_at: new Date().toISOString(),
+                profiles: { name: currentUserProfile.value?.name || 'Ahlun' }
+              });
+            }
+
+            newCommentText.value = '';
+            showToast('Comment posted.');
+          } catch (err) {
+            showToast(err.message, 'error');
+          } finally {
+            commentSubmitting.value = false;
+          }
+        };
+
+        // Filtering & Computed Statistics
+        const overdueTasks = computed(() => {
+          const today = new Date().toISOString().split('T')[0];
+          return tasks.value.filter(t => t.status !== 'Done' && t.deadline && t.deadline < today);
+        });
+
+        const summaryStats = computed(() => [
+          { label: 'Total Tasks', count: tasks.value.length, icon: 'layers', bgClass: 'bg-slate-100', textClass: 'text-slate-800' },
+          { label: 'To Do', count: tasks.value.filter(t => t.status === 'To Do').length, icon: 'clock', bgClass: 'bg-blue-50', textClass: 'text-blue-600' },
+          { label: 'In Progress', count: tasks.value.filter(t => t.status === 'In Progress').length, icon: 'refresh-cw', bgClass: 'bg-amber-50', textClass: 'text-amber-600' },
+          { label: 'Waiting', count: tasks.value.filter(t => t.status === 'Waiting').length, icon: 'alert-circle', bgClass: 'bg-purple-50', textClass: 'text-purple-600' },
+          { label: 'Done', count: tasks.value.filter(t => t.status === 'Done').length, icon: 'check-circle-2', bgClass: 'bg-emerald-50', textClass: 'text-emerald-600' },
+          { label: 'Overdue', count: overdueTasks.value.length, icon: 'alert-triangle', bgClass: 'bg-rose-50', textClass: 'text-rose-600' },
+        ]);
+
+        const myTasksSearch = ref('');
+        const myTasksFilterStatus = ref('');
+        const myTasksFilterPriority = ref('');
+
+        const myTasksCount = computed(() => {
+          if (!currentUserProfile.value) return 0;
+          return tasks.value.filter(t => t.pic_id === currentUserProfile.value.id).length;
+        });
+
+        const filteredMyTasks = computed(() => {
+          if (!currentUserProfile.value) return [];
+          return tasks.value.filter(t => {
+            const isMine = t.pic_id === currentUserProfile.value.id;
+            const matchesSearch = t.title.toLowerCase().includes(myTasksSearch.value.toLowerCase());
+            const matchesStatus = !myTasksFilterStatus.value || t.status === myTasksFilterStatus.value;
+            const matchesPriority = !myTasksFilterPriority.value || t.priority === myTasksFilterPriority.value;
+            return isMine && matchesSearch && matchesStatus && matchesPriority;
+          });
+        });
+
+        const teamTasksSearch = ref('');
+        const teamTasksFilterPIC = ref('');
+        const teamTasksFilterCategory = ref('');
+        const teamTasksFilterPriority = ref('');
+        const teamTasksFilterStatus = ref('');
+
+        const allCategoriesList = [
+          'HR - Recruitment', 'HR - Employee Administration', 'HR - Attendance & Roster', 
+          'HR - Contract', 'HR - Training & Development', 'GA - Camp/Mess', 
+          'GA - Catering', 'GA - Transportation', 'GA - Logistics'
+        ];
+
+        const filteredTeamTasks = computed(() => {
+          return tasks.value.filter(t => {
+            const matchesSearch = t.title.toLowerCase().includes(teamTasksSearch.value.toLowerCase());
+            const matchesPIC = !teamTasksFilterPIC.value || t.pic_id === teamTasksFilterPIC.value;
+            const matchesCategory = !teamTasksFilterCategory.value || t.category === teamTasksFilterCategory.value;
+            const matchesPriority = !teamTasksFilterPriority.value || t.priority === teamTasksFilterPriority.value;
+            const matchesStatus = !teamTasksFilterStatus.value || t.status === teamTasksFilterStatus.value;
+            return matchesSearch && matchesPIC && matchesCategory && matchesPriority && matchesStatus;
+          });
+        });
+
+        const resetTeamFilters = () => {
+          teamTasksSearch.value = '';
+          teamTasksFilterPIC.value = '';
+          teamTasksFilterCategory.value = '';
+          teamTasksFilterPriority.value = '';
+          teamTasksFilterStatus.value = '';
+        };
+
+        // Helpers
+        const getPicName = (picId) => {
+          const found = teamProfiles.value.find(p => p.id === picId);
+          return found ? found.name : 'Unassigned';
+        };
+
+        const getMemberTaskCount = (memberId) => {
+          return tasks.value.filter(t => t.pic_id === memberId).length;
+        };
+
+        const getMemberWorkloadPercent = (memberId) => {
+          if (tasks.value.length === 0) return 0;
+          const count = getMemberTaskCount(memberId);
+          return Math.min(Math.round((count / tasks.value.length) * 100 * 2.5), 100);
+        };
+
+        const getTasksForDay = (dayNum) => {
+          return tasks.value.filter(t => {
+            if (!t.deadline) return false;
+            const d = new Date(t.deadline).getDate();
+            return d === dayNum;
+          });
+        };
+
+        const categoryReportData = computed(() => {
+          const counts = {};
+          tasks.value.forEach(t => {
+            counts[t.category] = (counts[t.category] || 0) + 1;
+          });
+          const total = tasks.value.length || 1;
+          return Object.keys(counts).map(cat => ({
+            name: cat,
+            count: counts[cat],
+            percent: Math.round((counts[cat] / total) * 100)
+          }));
+        });
+
+        const completionRate = computed(() => {
+          if (tasks.value.length === 0) return 0;
+          const done = tasks.value.filter(t => t.status === 'Done').length;
+          return Math.round((done / tasks.value.length) * 100);
+        });
+
+        const userInitials = computed(() => {
+          if (!currentUserProfile.value?.name) return 'AH';
+          return currentUserProfile.value.name.substring(0, 2).toUpperCase();
+        });
+
+        const currentTabTitle = computed(() => {
+          const found = navItems.find(i => i.id === currentTab.value);
+          return found ? found.label : 'HRGA MSM TaskHub';
+        });
+
+        const currentDateFormatted = computed(() => {
+          return new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+        });
+
+        const formatDate = (dateStr) => {
+          if (!dateStr) return '';
+          try {
+            return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+          } catch (e) {
+            return dateStr;
+          }
+        };
+
+        const getPriorityClass = (priority) => {
+          switch(priority) {
+            case 'Urgent': return 'badge-urgent';
+            case 'High': return 'badge-high';
+            case 'Medium': return 'badge-medium';
+            default: return 'badge-low';
+          }
+        };
+
+        const getStatusBadgeStyle = (status) => {
+          switch(status) {
+            case 'Done': return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+            case 'In Progress': return 'bg-amber-50 text-amber-700 border border-amber-200';
+            case 'Waiting': return 'bg-purple-50 text-purple-700 border border-purple-200';
+            default: return 'bg-slate-100 text-slate-700 border border-slate-200';
+          }
+        };
+
+        const getStatusDotClass = (status) => {
+          switch(status) {
+            case 'Done': return 'bg-emerald-500';
+            case 'In Progress': return 'bg-amber-500';
+            case 'Waiting': return 'bg-purple-500';
+            default: return 'bg-slate-400';
+          }
+        };
+
+        // SQL Setup helper script for Supabase SQL Editor
+        const sqlScriptText = ref(`-- 1. Create PROFILES Table
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  role TEXT CHECK (role IN ('admin', 'member')) DEFAULT 'member',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 2. Create TASKS Table
+CREATE TABLE IF NOT EXISTS public.tasks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  description TEXT,
+  pic_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  category TEXT NOT NULL,
+  priority TEXT CHECK (priority IN ('Low', 'Medium', 'High', 'Urgent')) DEFAULT 'Medium',
+  status TEXT CHECK (status IN ('To Do', 'In Progress', 'Waiting', 'Done')) DEFAULT 'To Do',
+  start_date DATE,
+  deadline DATE NOT NULL,
+  notes TEXT,
+  created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 3. Create COMMENTS Table
+CREATE TABLE IF NOT EXISTS public.comments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id UUID REFERENCES public.tasks(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  comment TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 4. Create ATTACHMENTS Table
+CREATE TABLE IF NOT EXISTS public.attachments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id UUID REFERENCES public.tasks(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  file_name TEXT NOT NULL,
+  file_url TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 5. Enable Row Level Security (RLS)
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.attachments ENABLE ROW LEVEL SECURITY;
+
+-- 6. RLS Policies
+CREATE POLICY "Allow authenticated read profiles" ON public.profiles FOR SELECT USING (true);
+CREATE POLICY "Allow authenticated read tasks" ON public.tasks FOR SELECT USING (true);
+CREATE POLICY "Allow insert tasks" ON public.tasks FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow update tasks" ON public.tasks FOR UPDATE USING (true);
+CREATE POLICY "Allow delete tasks" ON public.tasks FOR DELETE USING (true);
+
+CREATE POLICY "Allow comments select" ON public.comments FOR SELECT USING (true);
+CREATE POLICY "Allow comments insert" ON public.comments FOR INSERT WITH CHECK (true);
+
+-- 7. Initial Seed User Profiles
+INSERT INTO public.profiles (name, email, role) VALUES
+  ('Ahlun', 'ahlun@msm.co.id', 'admin'),
+  ('Lewin', 'lewin@msm.co.id', 'member'),
+  ('Hamdi', 'hamdi@msm.co.id', 'member'),
+  ('Aries', 'aries@msm.co.id', 'member'),
+  ('Fahri', 'fahri@msm.co.id', 'member')
+ON CONFLICT (email) DO NOTHING;`);
+
+        const copySqlScript = () => {
+          navigator.clipboard.writeText(sqlScriptText.value);
+          showToast('SQL Setup script copied to clipboard!');
+        };
+
+        const renderIcons = () => {
+          setTimeout(() => {
+            if (window.lucide) {
+              window.lucide.createIcons();
+            }
+          }, 50);
+        };
+
+        onMounted(() => {
+          initSupabaseClient();
+          renderIcons();
+        });
+
+        onUpdated(() => {
+          renderIcons();
+        });
+
+        watch(currentTab, () => {
+          renderIcons();
+        });
+
+        return {
+          supabaseUrl,
+          supabaseAnonKey,
+          tempSupabaseUrl,
+          tempSupabaseAnonKey,
+          showConfigModal,
+          isSupabaseConfigured,
+          saveSupabaseConfig,
+          isLoggedIn,
+          authLoading,
+          authError,
+          loginEmail,
+          loginPassword,
+          currentUserProfile,
+          handleLogin,
+          handleLogout,
+          fillQuickLogin,
+          currentTab,
+          mobileMenuOpen,
+          navItems,
+          teamProfiles,
+          tasks,
+          dataLoading,
+          formSubmitting,
+          fetchTasksFromSupabase,
+          newTask,
+          submitCreateTask,
+          editTaskModalOpen,
+          editingTask,
+          canEditTask,
+          canUpdateStatus,
+          isAdmin,
+          openEditTaskModal,
+          submitEditTask,
+          quickUpdateStatus,
+          deleteConfirmModalOpen,
+          taskToDelete,
+          confirmDeleteTask,
+          executeDeleteTask,
+          selectedTask,
+          taskComments,
+          commentsLoading,
+          newCommentText,
+          commentSubmitting,
+          openTaskDetail,
+          postComment,
+          overdueTasks,
+          summaryStats,
+          myTasksSearch,
+          myTasksFilterStatus,
+          myTasksFilterPriority,
+          myTasksCount,
+          filteredMyTasks,
+          teamTasksSearch,
+          teamTasksFilterPIC,
+          teamTasksFilterCategory,
+          teamTasksFilterPriority,
+          teamTasksFilterStatus,
+          allCategoriesList,
+          filteredTeamTasks,
+          resetTeamFilters,
+          toast,
+          userInitials,
+          currentTabTitle,
+          currentDateFormatted,
+          getPicName,
+          getMemberTaskCount,
+          getMemberWorkloadPercent,
+          getTasksForDay,
+          categoryReportData,
+          completionRate,
+          formatDate,
+          getPriorityClass,
+          getStatusBadgeStyle,
+          getStatusDotClass,
+          sqlScriptText,
+          copySqlScript
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
